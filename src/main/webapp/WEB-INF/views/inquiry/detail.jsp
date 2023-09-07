@@ -105,6 +105,20 @@
 
     </style>
 </head>
+<script>
+/* 작성자만 문의글 볼 수 있게 제한 */
+validUser();
+
+function validUser(){
+	<c:if test="${error ne null}">
+	let hasError = ${error};
+	if (hasError) {
+		alert("문의글은 작성자만 확인이 가능합니다")
+	    window.history.back();
+	}
+	</c:if>
+}
+</script>
 <!-- 위에 모든 페이지까지 공통부분 건들 x -->
 <body>
 <!-- Spinner Start -->
@@ -140,207 +154,153 @@
 <div class="container">
     <div class="row mb-3">
         <div class="col-12">
+	        <sec:authorize access="hasRole('ROLE_USER')">
+	        	<c:if test="${inquiry.isAnswer eq 'N' }">
+		        	<div class="button-container">
+						<input type="hidden" name="no" value="${inquiry.no }" />
+						<a href="/inquiry/delete?no=${inquiry.no }" class=" btn btn-danger mt-1 float-end btn-sm"  style=" margin-right: 7px;" onclick="return confirmDelete();">삭제</a>
+					</div>  
+					<div class="button-container">
+						<a href="#" class=" btn btn-warning mt-1 float-end btn-sm" style=" margin-right: 7px;" data-bs-toggle="modal" data-bs-target="#modifyModal">수정</a>
+					</div>    
+				</c:if>
+	        </sec:authorize>	
+		    <div class="button-container">
+				<a href="/inquiry/inquiries" class=" btn btn-primary mt-1 btn-sm">목록</a>
+			</div>  
         </div>
-     <div class="button-container">
-		<a href="/inquiry/inquiries" class=" btn btn-primary mt-1 btn-sm">목록</a>
-	</div>   
+      		
     </div>
     <div class="row mb-3">
         <div class="col-12">
-            
-<!-- 문의 상세정보  -->
-	<div id="boardview" class="wrap_inner">
-		<div class="tablelayer">
-			<table class="inquiry_row">
-				<colgroup>
-					<col>
-					<col style="width:7.7%;">
-				</colgroup>
-				<tbody>
-					<tr>
-						<th class="tal">${inquiry.title }</th>
-						<td><fmt:formatDate value="${inquiry.createDate }" pattern="yyyy-MM-dd" /></td>
-					</tr>
-					<tr>
-						
-					</tr>
-				</tbody>
-			</table>
-			<div class="boxview">
-				${inquiry.content }
+			<!-- 문의 상세정보  -->
+			<div id="boardview" class="wrap_inner">
+				<div class="tablelayer">
+					<table class="inquiry_row">
+						<colgroup>
+							<col>
+							<col style="width:7.7%;">
+						</colgroup>
+						<tbody>
+							<tr>
+								<th class="tal">${inquiry.title }</th>
+								<td>작성일: <fmt:formatDate value="${inquiry.createDate }" pattern="yyyy-MM-dd" /></td>
+    							 <td></td>
+  								 <td>수정일: <fmt:formatDate value="${inquiry.updateDate}" pattern="yyyy-MM-dd" /></td>
+							</tr>
+						</tbody>
+					</table>
+					<c:if test="${inquiry.filename != null}">
+					<img src="/resources/img/photo/${inquiry.filename }">
+					</c:if>
+					<div class="boxview">
+						${inquiry.content }
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
-	 		<sec:authorize access="hasRole('ROLE_MANAGER')">
-				<div class="button-container">
-					<input type="hidden" name="no" value="${inquiry.no }" />
-					<a href="/board/delete?no=${inquiry.no }" class=" btn btn-danger mt-1 float-end btn-sm"  style=" margin-right: 7px;" onclick="return confirmDelete();">삭제</a>
-				</div>  
-				<div class="button-container">
-					<a href="#" class=" btn btn-warning mt-1 float-end btn-sm" style=" margin-right: 7px;" data-bs-toggle="modal" data-bs-target="#modifyModal">수정</a>
-				</div>     
-			</sec:authorize>
+	<sec:authorize access="hasRole('ROLE_MANAGER')">
+	<div class="row mb-3">
+		<h1>답변</h1>
+		<div id="replyList">
+			<c:forEach var="answer" items="${answers }">
+				<p>${answer.content }</p>
+				<a href="/inquiry/deleteAnswer?inquiryNo=${inquiry.no}&answerNo=${answer.no}" class=" btn btn-danger mt-1 float-end btn-sm"  style=" margin-right: 7px;" onclick="return confirmDelete();">삭제</a>
+			</c:forEach>
 		</div>
+		<c:if test="${inquiry.isAnswer eq 'N' }">
+			
+				<textarea id="reply"></textarea>
+				<button type="button" id="replyBtn">작성</button>
+		</c:if>
 	</div>
+	</sec:authorize>
 </div>
+
+<script type="text/javascript">
+document.querySelector("#replyBtn").addEventListener("click", function(){
+	let inquiryNo = document.querySelector("#inquiry_no").value;
+	let replyValue = document.querySelector("#reply").value;
+	
+	let data = {no: inquiryNo, content: replyValue}
+	
+	$.ajax({
+        type: "post",
+        url: "addReply?no=${inquiry.no}",
+        data:  data,
+        success: function(result) {
+        	console.log("success")
+            console.log(result);
+        	
+        	let replyArea = document.querySelector("#replyList");
+        	replyArea.innerHTML = "";
+        	
+        	for(let i = 0; i < result.length; i++){
+        		let reply = `
+        			<p>\${result[i].content}</p>
+        			<a href="/inquiry/deleteAnswer?inquiryNo=${inquiry.no}&answerNo=\${result[i].no}" 
+        					class=" btn btn-danger mt-1 float-end btn-sm"  
+        					style=" margin-right: 7px;" onclick="return confirmDelete();">삭제</a>
+        		`
+        		replyArea.innerHTML += reply
+        	}
+        	
+        	$("#reply").hide();
+        	$("#replyBtn").hide();
+        }
+    });
+})
+</script>
 
 <!-- 수정 모달 창 -->
 <div class="modal fade" id="modifyModal" tabindex="-1" aria-labelledby="modifyModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
 		<div class="container" >
-        	<div class="container py-3">
-			   	<div class="modal-header">
-			   		<h3>공지사항 수정하기</h3>
+        	 <div class="container py-3">
+			   	<div>
+			   		<h3>1:1문의 수정하기</h3>
 			   	</div>
 	            <div class="row g-5">
 	                <div class="col-lg-13">
-	                    <div class=" rounded h-100 d-flex align-items-center p-5" >
-	                        <form method="post" action="/board/modify">
+	                        <form method="post" action="/inquiry/inquiryUpdate" enctype="multipart/form-data">
 	                            <div class="row g-3">
 	                                <div class="col-12" >
-	                                	<input type="hidden" name="no" value="${board.no }" />
-	                                    <select class="form-select bg-light border-0" name="main" style="height: 55px;">
-	                                        <option value="0" ${board.main == '0' ? 'selected' : ''}>주요 공지사항</option>
-	                                        <option value="1" ${board.main == '1' ? 'selected' : ''}>일반 공지사항</option>
+	                                	<input type="hidden" name="no" value="${inquiry.no }" id="inquiry_no"/>
+	                                    <select class="form-select bg-light border-0" name="type" style="height: 55px;">
+	                                        <option value="수업" ${inquiry.title == '수업' ? 'selected' : ''}>수업 관련</option>
+	                                        <option value="헬스장" ${inquiry.title == '헬스장' ? 'selected' : ''}>헬스장 관련</option>
+	                                        <option value="웹사이트" ${inquiry.title == '웹사이트' ? 'selected' : ''}>웹사이트 관련</option>
+	                                        <option value="기타" ${inquiry.title == '기타' ? 'selected' : ''}>기타</option>
 	                                    </select>
 	                                </div>
 	                                <div class="col-xl-12">
-	                                    <input type="text" class="form-control bg-light border-0" name="title" placeholder="제목" style="height: 55px;" value="${board.title}">
+	                                    <input type="text" class="form-control bg-light border-0" name="title" value="${inquiry.title }"  style="height: 55px;"/>
 	                                </div>
-	                        		<textarea id="summernote" name="content" >${board.content }</textarea>
+	                                <div>
+	                                	<label class="attr-value-option"><input type="checkbox" name="secret" value="Y" onchange="kboard_toggle_password_field(this)" checked> 비밀글</label>
+										<input type='file' name="photofile" style="margin-left: 20px;"/>
+	                                </div>
+	                        			<textarea id="summernote" name="content">
+	                        				${inquiry.content }
+	                        			</textarea>
+	                                <div class="col-12">
+	                                    <button class="btn btn-dark w-100 py-3" type="submit">수정하기</button>
+	                                </div>
 	                            </div>
-					   			<div class="modal-footer">
-							        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">취소</button>
-							        <button type="submit" class="btn btn-warning">수정</button>
-					   			</div>
 	                        </form>
 	                    </div>
 	                </div>
-            	</div>
-        	</div>
+	            </div>
+	        </div>
    		</div>
     </div>
-  </div>
 </div>
-
-<!-- 수정 모달 창 -->
-<div class="modal fade" id="modifyModal" tabindex="-1" aria-labelledby="modifyModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-		<div class="container" >
-        	<div class="container py-3">
-			   	<div class="modal-header">
-			   		<h3>공지사항 수정하기</h3>
-			   	</div>
-	            <div class="row g-5">
-	                <div class="col-lg-13">
-	                    <div class=" rounded h-100 d-flex align-items-center p-5" >
-	                        <form method="post" action="/board/modify">
-	                            <div class="row g-3">
-	                                <div class="col-12" >
-	                                	<input type="hidden" name="no" value="${board.no }" />
-	                                    <select class="form-select bg-light border-0" name="main" style="height: 55px;">
-	                                        <option value="0" ${board.main == '0' ? 'selected' : ''}>주요 공지사항</option>
-	                                        <option value="1" ${board.main == '1' ? 'selected' : ''}>일반 공지사항</option>
-	                                    </select>
-	                                </div>
-	                                <div class="col-xl-12">
-	                                    <input type="text" class="form-control bg-light border-0" name="title" placeholder="제목" style="height: 55px;" value="${board.title}">
-	                                </div>
-	                        		<textarea id="summernote" name="content" >${board.content }</textarea>
-	                            </div>
-					   			<div class="modal-footer">
-							        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">취소</button>
-							        <button type="submit" class="btn btn-warning">수정</button>
-					   			</div>
-	                        </form>
-	                    </div>
-	                </div>
-            	</div>
-        	</div>
-   		</div>
-    </div>
-  </div>
-</div>
-
 
 <!-- Lesson Register Form End  -->
-<div class="container-fluid bg-dark text-light mt-5 wow fadeInUp" data-wow-delay="0.1s">
-    <div class="container">
-        <div class="row gx-5">
-            <div class="col-lg-8 col-md-6">
-                <div class="row gx-5">
-                    <div class="col-lg-4 col-md-12 pt-5 mb-5">
-                        <div class="section-title section-title-sm position-relative pb-3 mb-4">
-                            <h3 class="text-light mb-0">Get In Touch</h3>
-                        </div>
-                        <div class="d-flex mb-2">
-                            <i class="bi bi-geo-alt text-primary me-2"></i>
-                            <p class="mb-0">123 Street, New York, USA</p>
-                        </div>
-                        <div class="d-flex mb-2">
-                            <i class="bi bi-envelope-open text-primary me-2"></i>
-                            <p class="mb-0">info@example.com</p>
-                        </div>
-                        <div class="d-flex mb-2">
-                            <i class="bi bi-telephone text-primary me-2"></i>
-                            <p class="mb-0">+012 345 67890</p>
-                        </div>
-                        <div class="d-flex mt-4">
-                            <a class="btn btn-primary btn-square me-2" href="#"><i class="fab fa-twitter fw-normal"></i></a>
-                            <a class="btn btn-primary btn-square me-2" href="#"><i class="fab fa-facebook-f fw-normal"></i></a>
-                            <a class="btn btn-primary btn-square me-2" href="#"><i class="fab fa-linkedin-in fw-normal"></i></a>
-                            <a class="btn btn-primary btn-square" href="#"><i class="fab fa-instagram fw-normal"></i></a>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 col-md-12 pt-0 pt-lg-5 mb-5">
-                        <div class="section-title section-title-sm position-relative pb-3 mb-4">
-                            <h3 class="text-light mb-0">Quick Links</h3>
-                        </div>
-                        <div class="link-animated d-flex flex-column justify-content-start">
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Home</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>About Us</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Our Services</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Meet The Team</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Latest Blog</a>
-                            <a class="text-light" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Contact Us</a>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 col-md-12 pt-0 pt-lg-5 mb-5">
-                        <div class="section-title section-title-sm position-relative pb-3 mb-4">
-                            <h3 class="text-light mb-0">Popular Links</h3>
-                        </div>
-                        <div class="link-animated d-flex flex-column justify-content-start">
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Home</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>About Us</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Our Services</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Meet The Team</a>
-                            <a class="text-light mb-2" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Latest Blog</a>
-                            <a class="text-light" href="#"><i class="bi bi-arrow-right text-primary me-2"></i>Contact Us</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="container-fluid text-white" style="background: #061429;">
-    <div class="container text-center">
-        <div class="row justify-content-end">
-            <div class="col-lg-8 col-md-6">
-                <div class="d-flex align-items-center justify-content-center" style="height: 75px;">
-                    <p class="mb-0">&copy; <a class="text-white border-bottom" href="#">Your Site Name</a>. All Rights Reserved.
 
-                        <!--/*** This template is free as long as you keep the footer authorâs credit link/attribution link/backlink. If you'd like to use the template without the footer authorâs credit link/attribution link/backlink, you can purchase the Credit Removal License from "https://htmlcodex.com/credit-removal". Thank you for your support. ***/-->
-                        Designed by <a class="text-white border-bottom" href="https://htmlcodex.com">HTML Codex</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Footer End -->
-
+<jsp:include page="/WEB-INF/views/common/footernavbar.jsp" />
 
 <!-- Back to Top -->
 <a href="#" class="btn btn-lg btn-primary btn-lg-square rounded back-to-top"><i class="bi bi-arrow-up"></i></a>
@@ -370,9 +330,14 @@ $(document).ready(function() {
         lang: "ko-KR"
     });
 });
+
 function confirmDelete() {
     return confirm('정말로 삭제하시겠습니까? (되돌릴 수 없습니다.)');
 }
+
+
+
+
 </script>
 
 

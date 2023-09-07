@@ -1,6 +1,5 @@
 package kr.co.helf.service;
 
-import kr.co.helf.dto.*;
 import kr.co.helf.form.AddUserForm;
 import kr.co.helf.mapper.GroupLessonMapper;
 import kr.co.helf.mapper.OrderMapper;
@@ -15,9 +14,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.multipart.MultipartFile;
-
+import kr.co.helf.dto.AttendanceList;
+import kr.co.helf.dto.CustomerAttendanceListDto;
+import kr.co.helf.dto.CustomerDetailDto;
+import kr.co.helf.dto.CustomerListDto;
+import kr.co.helf.dto.CustomerOrderDto;
+import kr.co.helf.dto.Pagination;
+import kr.co.helf.form.UpdateUserForm;
+import kr.co.helf.mapper.InquiryMapper;
 import java.io.*;
 import java.util.*;
+
 
 @Service
 public class UserService {
@@ -38,7 +45,11 @@ public class UserService {
 	private TrainerReviewMapper trainerReviewMapper;
 
 	@Autowired
+	private InquiryMapper inquiryMapper;
+	
+	@Autowired
 	private GroupLessonMapper groupLessonMapper;
+
 
 	// 유저 회원가입
 	public void createUser(AddUserForm form) {
@@ -58,7 +69,8 @@ public class UserService {
 		rank.setNo(1);
 		user.setRank(rank);
 		user.setPoint(1000);
-
+		user.setSocial("web");
+		
 		userMapper.insertUser(user);
 
 	}
@@ -180,18 +192,34 @@ public class UserService {
 		javaMailSender.send(message);
 	}
 
-//		public void initPassword(String userId) {
-//			User user = userMapper.getUserById(userId);
-//			
-//			String pwd = generatePassword();
-//			String encPassword = passwordEncoder.encode(pwd);
-//			user.setEncryptedPassword(encPassword);
-//			
-//			userMapper.updateUser(user);
-//			
-//			sendEmail(user.getEmail(), pwd);
-//		}
 
+	// 마이페이지 - 유저 정보 수정
+		public void updateUser(String userId, UpdateUserForm form) {
+			User user = userMapper.getUserById(userId);
+			  		user.setEncryptedPassword(passwordEncoder.encode(form.getPassword()));
+			 		user.setEmail(form.getEmail1() + form.getEmail2());
+			  		user.setTel(form.getTel());
+			  		user.setMobileCarrier(form.getMobileCarrier());
+			  
+			  		userMapper.updateUser(user);
+		}
+	
+	// 마이페이지 - 유저 회원탈퇴
+		public void withdrawalUser(String id) {
+	      User user = userMapper.getUserById(id);
+	      
+	      if(user == null) {
+	         throw new RuntimeException("탈퇴처리를 진행할 회원이 존재하지 않습니다.");
+	      }
+	      
+	      if("N".equals(user.getStatus())) {
+	         throw new RuntimeException("이미 탈퇴처리가 완료된 회원입니다.");
+	      }
+	      
+	      user.setStatus("N");
+	      userMapper.updateUser(user);
+	   }
+		
 
 	public List<User> getUsersWithFourDigits(String fourDigits) {
 		return userMapper.getUsersByDigits(fourDigits);
@@ -291,6 +319,24 @@ public class UserService {
 		return result; 
 	}
 
+	// 마이페이지 - 내 정보 조회(유리)
+	public User getUserById(String id) {
+		return userMapper.getUserById(id);
+	}
+
+	// 마이페이지 - 내 리뷰 보기(예광)
+	public List<TrainerReview> getMyReviews(String userId) {
+		List<TrainerReview> reviews = trainerReviewMapper.getMyReviews(userId);
+		return reviews;
+	}
+	
+	// 마이페이지 - 내 문의내역(유리)
+	public List<Inquires> moreInquiries(String userId) {
+		List<Inquires> inquiries = inquiryMapper.getAllInquiryMypage(userId);
+		return inquiries;
+	}
+
+  // 등급 변경 (은정)
 	public void checkRank() {
 		
 		List<User> customers = userMapper.getAllCustomer();
@@ -306,11 +352,19 @@ public class UserService {
 		}
 	}
 
-	// 마이페이지 - 내 리뷰 보기(예광)
-	public List<TrainerReview> getMyReviews(String userId) {
-		List<TrainerReview> reviews = trainerReviewMapper.getMyReviews(userId);
+	// 마이페이지(트레이너) - 내 리뷰 보기(예광)
+	public List<TrainerReview> getTrainerReviews(User user) {
+		Trainer trainer = trainerReviewMapper.getTrainerById(user.getId());
+		List<TrainerReview> reviews = trainerReviewMapper.getReviewByTrainerNo(trainer.getTrainerNo());
+
 		return reviews;
 	}
+	// 마이페이지(트레이너) - 트레이너 번호를 전달받기 위한 메소드(예광)
+	public Trainer getTrainerById(User user){
+		Trainer trainer = trainerReviewMapper.getTrainerById(user.getId());
+		return trainer;
+	}
+
 
 	// 관리자 고객상세조회 - 최근 방문 내역 조회 - 채경
 	public Map<String, Object> getCustomerAttendances(Map<String, Object> param) {
@@ -410,8 +464,6 @@ public class UserService {
 
 		return result;
 	}
-
-
 }
 
 

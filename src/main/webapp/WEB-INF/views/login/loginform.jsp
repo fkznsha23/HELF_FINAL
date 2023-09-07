@@ -64,6 +64,11 @@
 	                            	<div class="col-xl-12">
 	                            		<a><strong style="font-size: 40px;">LOGIN</strong></a>
 	                            	</div>
+	                            	<c:if test="${param.error eq 'fail'}">
+	                            	<div class="alert alert-danger" style="height: 50px; width: 1000px;">
+										<strong>[잘못된 접근]</strong> 아이디 혹은 패스워드가 올바르지 않습니다.
+									</div>
+	                            	</c:if>
 	                                <div class="col-xl-12">
 	                                    <input type="text" class="form-control bg-light border-0" placeholder="ID" style="height: 55px;" name="id">
 	                                </div>
@@ -99,7 +104,7 @@
     </div>
 
 
-
+	<jsp:include page="/WEB-INF/views/common/footernavbar.jsp" />
     <!-- Back to Top -->
     <a href="#" class="btn btn-lg btn-primary btn-lg-square rounded back-to-top"><i class="bi bi-arrow-up"></i></a>
 

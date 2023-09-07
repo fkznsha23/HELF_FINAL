@@ -152,6 +152,7 @@
             <i class="bi bi-star"></i>
           </c:forEach>
         </h5>
+        
         <div class="d-flex align-items-center pt-1 pb-1 px-5">
           <h5 class="text-primary">${trainerReview.lesson.name }</h5>
         </div>
@@ -160,7 +161,11 @@
         <div class="d-flex align-items-center pt-1 pb-3 px-5 border-bottom mb-3">
           <img class="img-fluid rounded" src="/resources/img/testimonial-1.jpg" style="width: 60px; height: 60px;" >
           <div class="ps-4">
-            <h4 class="text-primary mb-1">${trainerReview.lessonApply.user.name }</h4>
+            <h4 class="text-primary mb-1">${trainerReview.lessonApply.user.name }
+            	<a class="bg-success text-white" style="font-size: 3px; border-radius: 50%; display: inline-block; padding: 5px;">
+			    	<span>그룹</span>
+				</a>
+            </h4>
             <small class="text-uppercase"><fmt:formatDate value="${trainerReview.createDate }" pattern="yyyy년 M월 d일" /></small>
           </div>
         </div>
@@ -208,7 +213,10 @@
         <div class="d-flex align-items-center pt-1 pb-3 px-5 border-bottom mb-3">
           <img class="img-fluid rounded" src="/resources/img/testimonial-1.jpg" style="width: 60px; height: 60px;" >
           <div class="ps-4">
-            <h4 class="text-primary mb-1">${trainerPersonalReview.personalLesson.user.name }</h4>
+            <h4 class="text-primary mb-1">${trainerPersonalReview.personalLesson.user.name }
+            	<a class="bg-info text-white" style="font-size: 3px; border-radius: 50%; display: inline-block; padding: 5px;">
+			    	<span>개인</span>
+				</a></h4>
             <small class="text-uppercase"><fmt:formatDate value="${trainerPersonalReview.createDate }" pattern="yyyy년 M월 d일" /></small>
           </div>
         </div>
@@ -221,7 +229,7 @@
 		            <sec:authentication property="principal.id" var="loginUserId" />
 		            <input type="hidden" id="login-user-id" value="${loginUserId}" />
 		            <c:if test="${trainerPersonalReview.personalLesson.user.id eq loginUserId}">
-		                <a href="/trainer-review/delete?reviewNo=${trainerPersonalReview.no }" class="btn btn-danger btn-sm float-end" style="margin-left: 5px;">삭제</a>
+		                <a type="button" data-review-no="${trainerPersonalReview.no}" data-trainer-no="${trainerPersonalReview.trainer.trainerNo}" class="btn btn-danger btn-sm float-end deleteButton" style="margin-left: 5px;">삭제</a>
 		                <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#collapseExample${trainerPersonalReview.no}" 
 		                		data-personal-review-no="${trainerPersonalReview.no }"
 		                		data-trainer-no="${trainerPersonalReview.trainer.trainerNo }"
@@ -445,6 +453,33 @@
 	    // 별점에서 마우스를 떠날 때 호버 효과 제거
 	    $('.rate').on('mouseleave', function(){
 	        $(this).find('label').removeClass('hover');
+	    });
+	});
+	
+	/* 리뷰 삭제버튼  */
+	$(document).ready(function(){
+	    $('.deleteButton').on('click', function(){
+	        var reviewNo = $(this).data('review-no');
+	        var trainerNo = $(this).data('trainer-no');
+	
+	        if(confirm('정말 삭제하시겠습니까?')) {
+	            $.ajax({
+	                url: '/trainer-review/personal-delete',  
+	                type: 'POST',
+	                data: {
+	                    reviewNo: reviewNo,
+	                    trainerNo: trainerNo
+	                },
+	                success: function(response) {
+	                    alert('리뷰가 성공적으로 삭제되었습니다.');
+	                    window.location.href = "/trainer-review/list?trainerNo=" + trainerNo; // 페이지 리다이렉트
+	                },
+	                error: function(xhr, status, error) {
+	                    // 오류가 발생했을 때의 처리
+	                    alert('리뷰 삭제 중 오류가 발생했습니다.');
+	                }
+	            });
+	        }
 	    });
 	});
 	
