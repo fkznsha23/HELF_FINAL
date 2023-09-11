@@ -89,10 +89,9 @@
 			               <table class="table">
 			               		<thead>
 									<tr>
-			                        	<th style="width: 20%;">글번호</th>
-			                        	<th style="width: 30%;">제목</th>
-			                        	<th style="width: 40%;">작성일</th>
-			                        	<th style="width: 10%;">조회수</th>
+			                        	<th style="width: 30%;">글번호</th>
+			                        	<th style="width: 40%;">제목</th>
+			                        	<th style="width: 30%;">작성일</th>
 			                     	</tr>
 								</thead>
 							   <tbody>
@@ -108,7 +107,6 @@
 				                        	</c:choose>
 											<td><a href="/board/detail?no=${board.no }">${board.title }</a></td>
 				                        	<td><fmt:formatDate value="${board.createDate }" pattern="yyyy년 M월 d일" /></td>
-											<td>${board.readCount }</td>
 		                    		 	</tr>
 							   </c:forEach>
 						  	
@@ -132,22 +130,22 @@
 	<div class="row mb-3" >
 		<div class="col-12" style="text-align: center;">
 			<c:choose>
-				<c:when test="${not empty result }">
-			<nav>
-				<ul class="pagination justify-content-center">
-					<li class="page-item ${result.pagination.first ? 'disabled' : '' }">
-						<a class="page-link"  href="notice?page=${result.pagination.prePage }" >이전</a>
-					</li>
-				<c:forEach var="num" begin="${result.pagination.beginPage }" end="${result.pagination.endPage }">
-					<li class="page-item ${result.pagination.page eq num ? 'active' : '' }">
-						<a class="page-link" href="notice?page=${num }" >${num }</a>
-					</li>
-				</c:forEach>
-					<li class="page-item ${result.pagination.last ? 'disabled' : '' }">
-						<a class="page-link" href="notice?page=${result.pagination.nextPage }" >다음</a>
-					</li>
-				</ul>
-			</nav>
+				<c:when test="${result.pagination.totalRows lt 0 }">
+					<nav>
+						<ul class="pagination justify-content-center">
+							<li class="page-item ${result.pagination.first ? 'disabled' : '' }">
+								<a class="page-link"  href="notice?page=${result.pagination.prePage }" >이전</a>
+							</li>
+						<c:forEach var="num" begin="${result.pagination.beginPage }" end="${result.pagination.endPage }">
+							<li class="page-item ${result.pagination.page eq num ? 'active' : '' }">
+								<a class="page-link" href="notice?page=${num }" >${num }</a>
+							</li>
+						</c:forEach>
+							<li class="page-item ${result.pagination.last ? 'disabled' : '' }">
+								<a class="page-link" href="notice?page=${result.pagination.nextPage }" >다음</a>
+							</li>
+						</ul>
+					</nav>
 				</c:when>
 			</c:choose>
 		</div>
