@@ -8,7 +8,7 @@
 </style>
 <head>
     <meta charset="utf-8">
-    <title>고객 상세 정보_수업 내역</title>
+    <title>고객 상세 정보_그룹수업 내역</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="Free HTML Templates" name="keywords">
     <meta content="Free HTML Templates" name="description">
@@ -146,7 +146,7 @@
 	   	</div>
 	   	<div class="col-10">
 	   	<div class="row mb-3">
-	   		<h3 class="mb-0 text-primary">최근 수업 내역 </h3>
+	   		<h3 class="mb-0 text-primary">최근 그룹 수업 내역 </h3>
 	   			<form id="form-specific-dates" method="get" action="customer-recent-visit">
 	   				<div class="card-body p-4 d-flex justify-content-center align-items-center">
 	   					<div>
@@ -165,36 +165,38 @@
 	   			<table class="table table-bordered shadow-sm" style="text-align: center; vertical-align: middle;">
                			<thead class="text-dark fs-4">
 	               			<tr>
-	               				<th class="border-bottom-0"><h6>번호</h6></th>
-	               				<th class="border-bottom-0"><h6>방문날짜</h6></th>
-	               				<th class="border-bottom-0"><h6>이용권 종류</h6></th>
-	               				<th class="border-bottom-0"><h6>이용권명</h6></th>
+	               				<th class="border-bottom-0"><h6>수업날짜</h6></th>
+	               				<th class="border-bottom-0"><h6>예약날짜</h6></th>
 	               				<th class="border-bottom-0"><h6>수업명</h6></th>
+	               				<th class="border-bottom-0"><h6>담당강사</h6></th>
+	               				<th class="border-bottom-0"><h6>출결상태</h6></th>
+	               				<th class="border-bottom-0"><h6>이용권명</h6></th>
 	               			</tr>
 	               		</thead>
 	               		<tbody>
 	               		<c:choose>
-	               			<c:when test="${not empty recentVisits }">
-	               			<c:forEach var="rv" items="${recentVisits }">
-			               		<tr>
-			               			<td>${rv.customerAttendance.no }</td>
-			               			<td><fmt:formatDate  value="${rv.customerAttendance.date }" pattern="yyyy-MM-dd"></fmt:formatDate></td>
-			               			<td>${rv.customerAttendance.myMembership.membership.category.name}</td>
-			               			<td>${rv.customerAttendance.myMembership.membership.name }</td>
-			               			<c:choose>
-			               				<c:when test="${rv.customerAttendance.lessonName != null}">
-			               					<td>${rv.customerAttendance.lessonName }</td>
-			               				</c:when>
-			               				<c:otherwise>
-			               					<td>-</td>
-			               				</c:otherwise>
-			               			</c:choose>
-			               		</tr>
-		               		</c:forEach>
-		               		</c:when>
+	               			<c:when test="${not empty groupLessonList }">
+	               				<c:forEach var="gcl" items="${ groupLessonList}">
+	               					<tr>
+		               					<td><fmt:formatDate value="${gcl.lesson.date}" pattern="yyyy-MM-dd" /> ${gcl.lesson.time }</td>
+		               					<td><fmt:formatDate value="${gcl.applyDate}" pattern="yyyy-MM-dd"/></td>
+		               					<td>${gcl.lesson.name}</td>
+		               					<td>${gcl.lesson.user.name }</td>
+		               					<td>
+		               					<c:choose>
+		               						<c:when test="${gcl.attendanceStatus == 'Y'}">
+		               							출석
+		               						</c:when>
+		               						<c:otherwise>결석
+		               						</c:otherwise>
+		               					</c:choose></td>
+		               					<td>${gcl.myMembership.membership.name}</td>
+	               					</tr>
+	               				</c:forEach>
+	               			</c:when>
 		               		<c:otherwise>
 		               			<tr>
-		               				<td colspan="5">방문 이력이 없습니다.</td>
+		               				<td colspan="5">참여한 그룹수업 이력이 없습니다.</td>
 		               			</tr>
 		               		</c:otherwise>
 		               	</c:choose>
@@ -224,7 +226,7 @@
                		</nav> 
 	               </c:if>
      			<div style="text-align:center;">
-	     			<a href="/management/customer-recent-visit?id=${customerDetailDto.user.id}" class="btn btn-primary">목록</a>
+	     			<a href="/management/customer-lesson?id=${customerDetailDto.user.id}" class="btn btn-primary">목록</a>
      			</div>
 	   		</div>
 	   	</form>

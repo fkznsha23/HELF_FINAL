@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.multipart.MultipartFile;
+
 import kr.co.helf.dto.AttendanceList;
 import kr.co.helf.dto.CustomerAttendanceListDto;
 import kr.co.helf.dto.CustomerDetailDto;
@@ -24,6 +25,7 @@ import kr.co.helf.dto.CustomerListDto;
 import kr.co.helf.dto.CustomerOrderDto;
 import kr.co.helf.dto.Pagination;
 import kr.co.helf.dto.TrainerDto;
+import kr.co.helf.exception.WithdrawalUserException;
 import kr.co.helf.mapper.InquiryMapper;
 import java.io.*;
 import java.text.ParseException;
@@ -252,8 +254,60 @@ public class UserService {
     	  
     	  userMapper.updateUser(user);
     	  
-    	// 사진파일 
-    	Trainer trainer= personalLessonMapper.getTrainerAndCareer(userId);
+    	  // 사진파일 
+    	  Trainer trainer= personalLessonMapper.getTrainerAndCareer(userId);
+    	  
+    	  //트레이너 경력추가
+    	  List<String> careerNames = form.getUpdateCareerNames();
+          List<String> startDatesStrings = form.getUpdateCareerStartDates();
+          List<String> endDatesStrings = form.getUpdateCareerEndDates();
+          List<String> careerNo = form.getUpdateCareerNo();
+
+          List<Date> startDates = new ArrayList<>();
+          List<Date> endDates = new ArrayList<>();
+
+          SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+          for(String startDateString : startDatesStrings) {
+              try {
+                  startDates.add(formatter.parse(startDateString));
+              } catch (ParseException e) {
+                  throw new RuntimeException("유효하지 않은 날짜 형식입니다.");
+              }
+          }
+
+          for(String endDateString : endDatesStrings) {
+              try {
+                  endDates.add(formatter.parse(endDateString));
+              } catch (ParseException e) {
+                  throw new RuntimeException("유효하지 않은 날짜 형식입니다.");
+              }
+          }
+
+          if (careerNames.size() != startDates.size() || careerNames.size() != endDates.size()) {
+              throw new RuntimeException("입력된 리스트의 크기가 일치하지 않습니다.");
+          }
+
+          for (int i = 0; i < careerNames.size(); i++) {
+        	    TrainerCareer career = new TrainerCareer();
+
+        	    // career_no가 null이거나 비어 있지 않은 경우에만 업데이트를 수행
+        	    if (careerNo != null && careerNo.size() > i && careerNo.get(i) != null && !careerNo.get(i).isEmpty()) {
+        	        try {
+        	            career.setNo(Integer.parseInt(careerNo.get(i)));
+        	        } catch (NumberFormatException e) {
+        	            throw new RuntimeException("유효하지 않은 careerNo 형식입니다: " + careerNo.get(i));
+        	        }
+
+        	        career.setName(careerNames.get(i));
+        	        career.setStartDate(startDates.get(i));
+        	        career.setEndDate(endDates.get(i));
+        	        career.setTrainer(trainer);
+
+        	        userMapper.updateTrainerCareer(career);
+        	    }
+        	}  	    
+  
     	
   		MultipartFile photofile = form.getPhotofile();
   		if (!photofile.isEmpty()) {
@@ -268,10 +322,12 @@ public class UserService {
     	  
     	  userMapper.updateTrainerById(trainer);
       }
+      
+      
+       
    
    // 마이페이지 - 유저 회원탈퇴
-      public void withdrawalUser(String id) {
-         User user = userMapper.getUserById(id);
+      public void withdrawalUser(User user) {
          
          if(user == null) {
             throw new RuntimeException("탈퇴처리를 진행할 회원이 존재하지 않습니다.");
@@ -279,6 +335,32 @@ public class UserService {
          
          if("N".equals(user.getStatus())) {
             throw new RuntimeException("이미 탈퇴처리가 완료된 회원입니다.");
+         }
+         
+         if("ROLE_TRAINER".equals(user.getType())) {
+        	 Trainer trainer = personalLessonMapper.getTrainerByUserId(user.getId());
+        	 
+        	 Date today = new Date();
+        	 List<Lesson> lessonList = userMapper.getAllLessonById(user.getId());
+        	 if(!lessonList.isEmpty()) {
+        		 for(Lesson lesson : lessonList) {
+        			 Date lessonDate = lesson.getDate();
+        			 
+        			 if(lessonDate.compareTo(today) > 0) {
+        				 throw new WithdrawalUserException("아직 수업이 남아있기 때문에 탈퇴는 불가합니다.");
+        			 }
+        		 }
+        	 }
+        	 
+        	 List<PersonalLesson> personalList = userMapper.getAllPersonalLessonByNo(trainer.getTrainerNo());
+        	 if(!personalList.isEmpty()) {
+	        	 for(PersonalLesson personalLesson : personalList) {
+	        		 Date lessonDate = personalLesson.getDate();
+	        		 if(lessonDate.compareTo(today) > 0) {
+	        			 throw new WithdrawalUserException("아직 수업이 남아있기 때문에 탈퇴는 불가합니다.");
+	        		 }
+	        	 }
+        	 }
          }
          
          user.setStatus("N");
@@ -332,7 +414,7 @@ public class UserService {
    // 고객 조회 - 채경
    public Map<String, Object> getAllCustomerInfo(Map<String, Object> param) {
       // 총 행의 개수 
-      int totalRows = userMapper.getCustomerTotalRows();
+      int totalRows = userMapper.getCustomerTotalRows(param);
 
       // 파라미터 값을 뽑아내서 페이지네이션에 넣는다.
       int page = (int) param.get("page");
@@ -578,6 +660,133 @@ public class UserService {
 		// 업데이트
 		userMapper.updateTrainerById(trainer);
 		userMapper.updateUser(user);
+	}
+	//신규 경력정보 insert
+	public void insertTrainer(String userId, AddUserForm insertForm) throws IOException {
+  	  User user = userMapper.getUserById(userId);
+	  
+  	  user.setEncryptedPassword(passwordEncoder.encode(insertForm.getPassword()));
+  	  user.setEmail(insertForm.getEmail1() + insertForm.getEmail2());
+  	  user.setTel(insertForm.getTel());
+  	  user.setMobileCarrier(insertForm.getMobileCarrier());
+  	  
+  	  userMapper.updateUser(user);
+  	  
+  	  // 사진파일 
+  	  Trainer trainer= personalLessonMapper.getTrainerAndCareer(userId);
+  	  
+  	  //트레이너 경력추가
+  	  List<String> careerNames = insertForm.getCareerNames();
+        List<String> startDatesStrings = insertForm.getCareerStartDates();
+        List<String> endDatesStrings = insertForm.getCareerEndDates();
+
+        List<Date> startDates = new ArrayList<>();
+        List<Date> endDates = new ArrayList<>();
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+        for(String startDateString : startDatesStrings) {
+            try {
+                startDates.add(formatter.parse(startDateString));
+            } catch (ParseException e) {
+                throw new RuntimeException("유효하지 않은 날짜 형식입니다.");
+            }
+        }
+
+        for(String endDateString : endDatesStrings) {
+            try {
+                endDates.add(formatter.parse(endDateString));
+            } catch (ParseException e) {
+                throw new RuntimeException("유효하지 않은 날짜 형식입니다.");
+            }
+        }
+
+        if (careerNames.size() != startDates.size() || careerNames.size() != endDates.size()) {
+            throw new RuntimeException("입력된 리스트의 크기가 일치하지 않습니다.");
+        }
+
+        for (int i = 0; i < careerNames.size(); i++) {
+      	    TrainerCareer career = new TrainerCareer();
+
+      	    career.setName(careerNames.get(i));
+      	    career.setStartDate(startDates.get(i));
+      	    career.setEndDate(endDates.get(i));
+      	    career.setTrainer(trainer);
+      	    
+      	    userMapper.insertTrainerCareer(career);
+      	}  	    
+
+  	
+		MultipartFile photofile = insertForm.getPhotofile();
+		if (!photofile.isEmpty()) {
+			String filename = photofile.getOriginalFilename();
+			
+			trainer.setTrainerFile(filename);
+		
+			OutputStream out = new FileOutputStream(new File(directory, filename));
+			InputStream in = photofile.getInputStream();
+			FileCopyUtils.copy(in, out);
+		}
+  	  
+  	  userMapper.updateTrainerById(trainer);
+		
+	}
+
+	public void deleteCareer(int careerNo) {
+		userMapper.deleteCareer(careerNo);
+		
+	}
+	// 트레이너 최근 수업내역 5개 조회(준오)
+	public List<PersonalLesson> getRecentPersonalLessons(String userId) {
+		
+	    List<PersonalLesson> personalLessons = personalLessonMapper.getRecentPersonalLessons(userId);
+	    
+	    for (PersonalLesson personalLesson : personalLessons) {
+	        int myMembershipNo = personalLesson.getMyMembership().getNo();  // PersonalLesson에서 myMembership_no 가져오기
+
+	        // myMembership 테이블에서 membership_no 찾기
+	        Integer membershipNo = personalLessonMapper.getMembershipNoByMyMembershipNo(myMembershipNo);
+	        
+	        if (membershipNo != null) {
+	            // 찾은 membership_no를 사용하여 HELF_MEMBERSHIP 테이블에서 Membership 이름 찾기
+	            String membershipName = personalLessonMapper.getMembershipNameByNo(membershipNo);
+	            
+	            // MyMembership 객체를 생성하고 Membership 정보 설정
+	            MyMembership myMembership = new MyMembership();
+	            
+	            // Membership 객체 생성하고 이름 설정
+	            Membership membership = new Membership();
+	            membership.setName(membershipName);
+	            
+	            // MyMembership에 Membership 설정
+	            myMembership.setMembership(membership);
+	            
+	            // PersonalLesson에 MyMembership 설정
+	            personalLesson.setMyMembership(myMembership);
+	        }
+	    }
+		return personalLessons;
+	}
+	// 개인수업 자세히보기
+	public Map<String, Object> trainerMyAllPersonalLessons(Map<String, Object> param, String userId) {
+	      Map<String, Object> result = new HashMap<>();
+
+	      int totalRows = personalLessonMapper.getTotalRows(param);
+	      int page = (int) param.get("page");
+
+	      Pagination pagination = new Pagination(page, totalRows);
+	      int begin = pagination.getBegin();
+	      int end = pagination.getEnd();
+	      param.put("begin", begin);
+	      param.put("end", end);
+	      param.put("userId", userId);
+
+	      List<PersonalLesson> personalLessons = personalLessonMapper.trainerMyAllPersonalLessons(param);
+
+	      result.put("personalLesson", personalLessons);
+	      result.put("pagination", pagination);
+	      
+		return result;
 	}
 
 }

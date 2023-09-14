@@ -101,7 +101,7 @@
         <div class="row mb-3">
             <div class="col-12">
             	<div>
-				    <button id="personal-lesson-button" class="btn btn-outline-primary mb-1" type="button" >개인수업</button>
+				    <button id="personal-lesson-button" class="btn btn-outline-primary mb-1 active" type="button"  >개인수업</button>
 				    <button id="group-lesson-button" class="btn btn-outline-primary mb-1" type="button">그룹수업</button>
 				</div>
 				
@@ -135,27 +135,29 @@
                             </tr>
                             </thead>
                             <tbody>
-							    <c:choose>
-							        <c:when test="${not empty personalLessonList}">
-							            <c:forEach var="lesson" items="${personalLessonList}">
-							                <tr>
-							                    <td class="text-center">${lesson.personalLesson.name}</td>
-							                    <td class="text-center"><fmt:formatDate value="${lesson.personalLesson.date}" pattern="yyyy년 M월 d일" /></td>
-							                    <td class="text-center">${lesson.personalLesson.time}</td>
-							                    <td class="text-center">${lesson.personalLesson.status}</td>
-							                    <td class="text-center">
-							                        <a class="btn btn-primary btn-sm" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample" data-lesson-no="${lesson.personalLesson.no}" data-consultation-no="${lesson.consultation.consultationNo}" data-trainer-no="${lesson.trainer.trainerNo}">리뷰작성</a>
-							                    </td>
-							                </tr>
-							            </c:forEach>
-							        </c:when>
-							        <c:otherwise>
-							            <tr>
-							                <td colspan="5" class="text-center text-primary"><strong>조회된 수업이 없습니다.</strong></td>
-							            </tr>
-							        </c:otherwise>
-							    </c:choose>
-							</tbody>
+    <c:choose>
+        <c:when test="${not empty personalLessonList}">
+            <c:forEach var="lesson" items="${personalLessonList}">
+                <tr>
+                    <td class="text-center">${lesson.personalLesson.name}</td>
+                    <td class="text-center"><fmt:formatDate value="${lesson.personalLesson.date}" pattern="yyyy년 M월 d일" /></td>
+                    <td class="text-center">${lesson.personalLesson.time}</td>
+                    <td class="text-center">${lesson.personalLesson.status}</td>
+                    <td class="text-center">
+                        <c:if test="${lesson.personalLesson.status == 'Y'}">
+                            <a class="btn btn-primary btn-sm" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample" data-lesson-no="${lesson.personalLesson.no}" data-consultation-no="${lesson.consultation.consultationNo}" data-trainer-no="${lesson.trainer.trainerNo}">리뷰작성</a>
+                        </c:if>
+                    </td>
+                </tr>
+            </c:forEach>
+        </c:when>
+        <c:otherwise>
+            <tr>
+                <td colspan="5" class="text-center text-primary"><strong>조회된 수업이 없습니다.</strong></td>
+            </tr>
+        </c:otherwise>
+    </c:choose>
+</tbody>
                         </table>
                         <div class="collapse" id="collapseExample" id="review">
 	                        <form method="post" action="/trainer-review/personal-review-registration">
@@ -213,7 +215,9 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <c:forEach var="lessonApply" items="${applyList }">
+                            <c:choose>
+                                <c:when test="${not empty applyList}">
+                                    <c:forEach var="lessonApply" items="${applyList }">
                                 <tr>
                                     <td class="text-center">${lessonApply.lesson.no }</td>
                                     <td class="text-center"><a href="/group-lesson/detail?no=${lessonApply.lesson.no }">${lessonApply.lesson.name }</a></td>
@@ -223,7 +227,14 @@
                                     <!-- 위의 <td>에서 attendanceStatus가 Y일때만 리뷰작성 버튼이 활성화 되게하는 코드 -->
                                     <td class="text-center"><a href="/trainer-review/registration?applyNo=${lessonApply.no}&lessonNo=${lessonApply.lesson.no}" class="btn btn-primary btn-sm ${lessonApply.attendanceStatus eq 'Y' ? '' : 'disabled'}">리뷰작성</a></td>
                                 </tr>
-                            </c:forEach>
+                                </c:forEach>
+                                </c:when>
+                                <c:otherwise>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-primary"><strong>조회된 수업이 없습니다.</strong></td>
+                                    </tr>
+                                </c:otherwise>
+                            </c:choose>
                             </tbody>
                         </table>
                     </div>
